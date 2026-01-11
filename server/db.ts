@@ -1,6 +1,6 @@
-import { eq } from "drizzle-orm";
+import { eq, and, gte, lte, desc } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users } from "../drizzle/schema";
+import { InsertUser, users, patients, appointments, dentists, timeSlots, clinicSettings } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -89,4 +89,142 @@ export async function getUserByOpenId(openId: string) {
   return result.length > 0 ? result[0] : undefined;
 }
 
-// TODO: add feature queries here as your schema grows.
+// Patients queries
+export async function getOrCreatePatient(email: string, fullName: string, phone: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const existing = await db.select().from(patients).where(eq(patients.email, email)).limit(1);
+  if (existing.length > 0) return existing[0];
+
+  await db.insert(patients).values({ fullName, email, phone });
+  const result = await db.select().from(patients).where(eq(patients.email, email)).limit(1);
+  return result[0];
+}
+
+export async function getPatientByEmail(email: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(patients).where(eq(patients.email, email)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function getPatientById(patientId: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(patients).where(eq(patients.id, patientId)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+// Appointments queries
+export async function createAppointment(patientId: string, appointmentTime: Date, reason: string, phoneNumber: string, status: "pending" | "confirmed" | "cancelled" | "finished" = "pending") {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const result = await db.insert(appointments).values({
+    patientId,
+    appointmentTime,
+    reason,
+    phoneNumber,
+    status,
+  });
+  return result;
+}
+
+export async function getAppointmentsByPatient(patientId: string) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  const result = await db.select().from(appointments).where(eq(appointments.patientId, patientId));
+  return result;
+}
+
+export async function getAppointmentById(appointmentId: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  
+  const result = await db.select().from(appointments).where(eq(appointments.id, appointmentId)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function updateAppointmentStatus(appointmentId: string, status: "pending" | "confirmed" | "cancelled" | "finished") {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await db.update(appointments).set({ status }).where(eq(appointments.id, appointmentId));
+}
+
+export async function getTodayAppointments() {
+  const db = await getDb();
+  if (!db) return [];
+  
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  
+  const result = await db.select().from(appointments).where(
+    and(
+      gte(appointments.appointmentTime, today),
+      lte(appointments.appointmentTime, tomorrow)
+    )
+  );
+  return result;
+}
+
+export async function getPendingAppointments() {
+  const db = await getDb();
+  if (!db) return [];
+  
+  const result = await db.select().from(appointments).where(
+    eq(appointments.status, "pending")
+  ).orderBy(desc(appointments.createdAt));
+  return result;
+}
+
+// Dentists queries
+export async function getActiveDentists() {
+  const db = await getDb();
+  if (!db) return [];
+  
+  const result = await db.select().from(dentists).where(eq(dentists.isActive, true));
+  return result;
+}
+
+export async function getDentistById(dentistId: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  
+  const result = await db.select().from(dentists).where(eq(dentists.id, dentistId)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function createDentist(fullName: string, specialization?: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await db.insert(dentists).values({ fullName, specialization });
+}
+
+// Time slots queries
+export async function getAvailableTimeSlots(startDate: Date, endDate: Date) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  const result = await db.select().from(timeSlots).where(
+    and(
+      gte(timeSlots.slotDateTime, startDate),
+      lte(timeSlots.slotDateTime, endDate),
+      eq(timeSlots.isBooked, false)
+    )
+  ).orderBy(timeSlots.slotDateTime);
+  return result;
+}
+
+export async function getClinicSettings() {
+  const db = await getDb();
+  if (!db) return null;
+  
+  const result = await db.select().from(clinicSettings).limit(1);
+  return result.length > 0 ? result[0] : null;
+}
