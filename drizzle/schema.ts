@@ -74,10 +74,7 @@ export const appointments = mysqlTable(
     phoneNumber: varchar("phone_number", { length: 20 }),
     notes: text("notes"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
-  },
-  (table) => ({
-    patientIdIdx: uniqueIndex("patient_id_idx").on(table.patientId),
-  })
+  }
 );
 
 export type Appointment = typeof appointments.$inferSelect;
@@ -102,6 +99,10 @@ export const timeSlots = mysqlTable(
 
 export type TimeSlot = typeof timeSlots.$inferSelect;
 export type InsertTimeSlot = typeof timeSlots.$inferInsert;
+
+// Add foreign key relationships
+// Note: Drizzle ORM doesn't enforce foreign keys by default in MySQL
+// These are documented here for reference and should be enforced at the database level
 
 /**
  * Clinic settings table - stores clinic configuration

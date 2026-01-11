@@ -1,7 +1,7 @@
 {
   "version": "5",
   "dialect": "mysql",
-  "id": "75a2a72b-6d36-42dc-9787-74d61bc6c528",
+  "id": "9c435e2c-259b-42b9-a87a-e47663c2a375",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "appointments": {
@@ -67,15 +67,7 @@
           "default": "(now())"
         }
       },
-      "indexes": {
-        "patient_id_idx": {
-          "name": "patient_id_idx",
-          "columns": [
-            "patient_id"
-          ],
-          "isUnique": true
-        }
-      },
+      "indexes": {},
       "foreignKeys": {},
       "compositePrimaryKeys": {
         "appointments_id": {

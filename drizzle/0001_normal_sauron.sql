@@ -1,0 +1,1 @@
+ALTER TABLE `appointments` DROP INDEX `patient_id_idx`;
